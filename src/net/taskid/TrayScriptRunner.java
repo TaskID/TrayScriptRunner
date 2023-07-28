@@ -27,6 +27,7 @@ public class TrayScriptRunner {
     private static TrayIcon trayIcon;
     private static PopupMenu popupMenu;
     private static Menu scriptMenu;
+    private static Menu settingsMenu;
 
     private static Executor executor;
     private static File scriptFolder;
@@ -103,18 +104,22 @@ public class TrayScriptRunner {
         }
         popupMenu = new PopupMenu();
         scriptMenu = new Menu("Scripts");
+        settingsMenu = new Menu("Settings");
 
         if(lastScript != null && lastScript.exists()) {
             trayIcon.setToolTip("Run " + lastScript.getName());
         }
 
         popupMenu.add(scriptMenu);
-        popupMenu.add(checkBox("Show Output", showOutput).stateChange(e -> {
+        popupMenu.add(settingsMenu);
+
+        settingsMenu.add(checkBox("Show Output", showOutput).stateChange(e -> {
             showOutput = !showOutput;
             settings.setProperty("show_output", Boolean.toString(showOutput));
             saveSettings();
         }).build());
-        popupMenu.add(item("Select Folder").click(e -> {
+        settingsMenu.addSeparator();
+        settingsMenu.add(item("Select Script Folder").click(e -> {
             JFileChooser chooser = new JFileChooser(scriptFolder);
             chooser.setDialogTitle("Select Scripts Folder");
             chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -130,6 +135,11 @@ public class TrayScriptRunner {
                 reloadScripts();
             }
         }).build());
+        settingsMenu.add(item("Open Script Folder").click(e -> {
+            openExplorerFolder(scriptFolder, "There is no script folder selected yet.");
+        }).build());
+        settingsMenu.addSeparator();
+        settingsMenu.add(item("Open Settings Folder").click(e -> openExplorerFolder(programFolder, "Folder does not exist.")).build());
         popupMenu.addSeparator();
         popupMenu.add(item("Exit").click(e -> System.exit(0)).build());
 
@@ -146,6 +156,9 @@ public class TrayScriptRunner {
                     }
                     runScript(lastScript);
                 }
+                if (e.getButton() == MouseEvent.BUTTON2) {
+                    openExplorerFolder(scriptFolder, "There is no script folder selected yet.");
+                }
             }
         });
 
@@ -157,6 +170,18 @@ public class TrayScriptRunner {
         }
 
         reloadScripts();
+    }
+
+    private static void openExplorerFolder(File folder, String invalid) {
+        if (folder == null || !folder.exists()) {
+            JOptionPane.showMessageDialog(null, invalid, "Warning", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        try {
+            Desktop.getDesktop().open(folder);
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(null, "Error:\n" + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private static void saveSettings() {
